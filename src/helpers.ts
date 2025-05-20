@@ -1,5 +1,5 @@
 import { Address, BigInt, BigDecimal, ethereum } from "@graphprotocol/graph-ts"
-import { Holder, Bundle } from '../generated/schema'
+import { Holder, Bundle, Movement } from '../generated/schema'
 import { LP as ILP } from '../generated/Distributor/LP'
 import { ERC20 as IERC20 } from '../generated/Distributor/ERC20'
 import { IChainlink } from '../generated/Distributor/IChainlink'
@@ -194,4 +194,33 @@ export function getPrice(addr: Address): BigDecimal {
   if (reservesCall.reverted) { lpAddr = getTokenWETHLP(addr) }
 
   return lpPrice(lpAddr)
+}
+
+export function createKind(event: ethereum.Event, kind: String, contractAddress: Address): void {
+  const id = `${contractAddress.toHex()}:${idForEvent(event)}`
+  let mov = new Movement(id)
+
+  mov.kind = kind
+  mov.timestamp = event.block.timestamp
+  mov.blockNumber = event.block.number
+  mov.transactionHash = event.transaction.hash
+
+  mov.save()
+}
+
+export function updateBundleCounter(field: String): void {
+  const bundle = getBundle()
+
+  if (field == "deposits") {
+    bundle.deposits = bundle.deposits.plus(BIG_INT_1)
+  } else if (field == "withdraws") {
+    bundle.withdraws = bundle.withdraws.plus(BIG_INT_1)
+  }
+  // Add more fields here if needed in the future
+  // else {
+  //   log.warning("updateBundleCounter: Unknown field '{}'", [field.toString()])
+  //   return // Do not save if field is unknown
+  // }
+
+  bundle.save()
 }
